@@ -11,6 +11,7 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 
 public class QuestionsTasks {
@@ -18,10 +19,14 @@ public class QuestionsTasks {
     private static final ChatGptApiClient chatGptApiClient = new ChatGptApiClient();
 
     public void getQuestions() {
-
+        System.setProperty("webdriver.chrome.silentOutput", "true");
         ChromeOptions opt = new ChromeOptions();
         opt.setExperimentalOption("debuggerAddress","localhost:9222");
         opt.addArguments("--remote-allow-origins=*");
+        opt.addArguments("--disable-extensions"); // Отключает расширения браузера
+        opt.addArguments("--disable-dev-shm-usage"); // Отключает /dev/shm использование
+        opt.addArguments("--disable-gpu"); // Отключает использование GPU
+        opt.addArguments("--no-sandbox"); // Отключает песочницу
         ChromeDriver driver = new ChromeDriver(opt);
 
         String script = "var inputs = document.querySelectorAll('input[id^=\"q205186\"]');" +
@@ -32,7 +37,10 @@ public class QuestionsTasks {
         // Очистка ответов чтобы не забагалось
         ((JavascriptExecutor) driver).executeScript(script);
 
-        List<WebElement> questionElements = driver.findElements(By.className("que"));
+        Duration timeoutDuration = Duration.ofSeconds(10);
+        WebDriverWait wait = new WebDriverWait(driver, timeoutDuration);
+
+        List<WebElement> questionElements = wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.className("que")));
 
 
         // Парсинг вопросов и ответов
@@ -63,11 +71,7 @@ public class QuestionsTasks {
             question = question.replace("\n\n", " ");
             question = question.replace("\"", "'");
             String result = questionId.replace(":sequencecheck", "answer") + chatGptApiClient.getAnswers(question);
-            System.out.println(result);
 
-
-            Duration timeoutDuration = Duration.ofSeconds(10);
-            WebDriverWait wait = new WebDriverWait(driver, timeoutDuration);
 
             WebElement element = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id(result)));
 

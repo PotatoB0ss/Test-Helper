@@ -18,13 +18,14 @@ public class ChatGptApiClient {
         try {
             String response = sendChatRequest(client, message);
             String content = getResponseContent(response);
-
             String regex = "\\d+";
             Pattern pattern = Pattern.compile(regex);
             Matcher matcher = pattern.matcher(content);
             if (matcher.find()) {
                 String answer = matcher.group();
                 return answer;
+            } else {
+                return content;
             }
         } catch (IOException e) {
             System.out.println("An error occurred: " + e.getMessage());

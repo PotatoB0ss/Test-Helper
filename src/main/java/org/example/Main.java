@@ -5,12 +5,13 @@ import com.github.kwhat.jnativehook.NativeHookException;
 import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
 import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
 
-import javax.imageio.ImageIO;
+
+import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
-import java.io.File;
+
 import java.io.IOException;
 
 
@@ -18,31 +19,21 @@ public class Main {
     private static TrayIcon trayIcon;
     private static final QuestionsTasks questionsTasks = new QuestionsTasks();
 
+    private static final OneQuestionTask oneQuestionTask = new OneQuestionTask();
+
     public static void main(String[] args) {
         initialize();
 
         try {
             GlobalScreen.registerNativeHook();
-
             SystemTray tray = SystemTray.getSystemTray();
-            BufferedImage trayImage = ImageIO.read(new File("icon.png"));
             PopupMenu popup = new PopupMenu();
-            MenuItem answersItem = new MenuItem("Answers");
-            MenuItem exitItem = new MenuItem("Exit");
-            popup.add(answersItem);
+            MenuItem exitItem = new MenuItem("Закрыть");
             popup.add(exitItem);
-            trayIcon = new TrayIcon(trayImage, "Test Helper", popup);
-            trayIcon.setImageAutoSize(true);
+            ImageIcon icon = new ImageIcon(new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB));
+            trayIcon = new TrayIcon(icon.getImage(), "Test Helper", popup);
             tray.add(trayIcon);
 
-            // Обработчик для кнопки Capture
-            answersItem.addActionListener(new ActionListener() {
-                public void actionPerformed(ActionEvent e) {
-                    fillAnswers();
-                }
-            });
-
-            // Обработчик для кнопки Exit
             exitItem.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     SystemTray tray = SystemTray.getSystemTray();
@@ -59,8 +50,10 @@ public class Main {
             GlobalScreen.addNativeKeyListener(new NativeKeyListener() {
                 @Override
                 public void nativeKeyPressed(NativeKeyEvent e) {
-                    if (e.getKeyCode() == NativeKeyEvent.VC_F2) {
+                    if (e.getKeyCode() == NativeKeyEvent.VC_E) {
                         fillAnswers();
+                    } else if (e.getKeyCode() == NativeKeyEvent.VC_R) {
+                        fillAnswer();
                     }
                 }
 
@@ -72,14 +65,14 @@ public class Main {
                 public void nativeKeyTyped(NativeKeyEvent e) {
                 }
             });
-        } catch (NativeHookException | IOException | AWTException ex) {
+        } catch (NativeHookException | AWTException ex) {
             ex.printStackTrace();
         }
     }
 
     private static void initialize() {
         try {
-            String command = "start chrome.exe --remote-debugging-port=9222 --user-data-dir=D:\\chromeData"; // Замените "команда" на нужную вам команду
+            String command = "start chrome.exe --remote-debugging-port=9222 --user-data-dir=C:\\Windows";
             ProcessBuilder processBuilder = new ProcessBuilder();
             processBuilder.command("cmd.exe", "/c", command);
             processBuilder.start();
@@ -90,5 +83,9 @@ public class Main {
 
     private static void fillAnswers() {
         questionsTasks.getQuestions();
+    }
+
+    private static void fillAnswer(){
+        oneQuestionTask.getQuestion();
     }
 }
