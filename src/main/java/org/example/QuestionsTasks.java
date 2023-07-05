@@ -1,8 +1,6 @@
 package org.example;
 
-
 import org.openqa.selenium.By;
-
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -19,72 +17,74 @@ public class QuestionsTasks {
     private static final ChatGptApiClient chatGptApiClient = new ChatGptApiClient();
 
     public void getQuestions() {
-        System.setProperty("webdriver.chrome.silentOutput", "true");
-        ChromeOptions opt = new ChromeOptions();
-        opt.setExperimentalOption("debuggerAddress","localhost:9222");
-        opt.addArguments("--remote-allow-origins=*");
-        opt.addArguments("--disable-extensions"); // Отключает расширения браузера
-        opt.addArguments("--disable-dev-shm-usage"); // Отключает /dev/shm использование
-        opt.addArguments("--disable-gpu"); // Отключает использование GPU
-        opt.addArguments("--no-sandbox"); // Отключает песочницу
-        ChromeDriver driver = new ChromeDriver(opt);
+        ChromeDriver driver = null;
 
-        String script = "var inputs = document.querySelectorAll('input[id^=\"q205186\"]');" +
-                "for (var i = 0; i < inputs.length; i++) {" +
-                "  inputs[i].removeAttribute('checked');" +
-                "}";
+        try {
+            System.setProperty("webdriver.chrome.silentOutput", "true");
+            ChromeOptions opt = new ChromeOptions();
+            opt.setExperimentalOption("debuggerAddress", "localhost:9222");
+            opt.addArguments("--remote-allow-origins=*");
+            opt.addArguments("--disable-extensions");
+            opt.addArguments("--disable-dev-shm-usage");
+            opt.addArguments("--disable-gpu");
+            opt.addArguments("--no-sandbox");
+            driver = new ChromeDriver(opt);
 
-        // Очистка ответов чтобы не забагалось
-        ((JavascriptExecutor) driver).executeScript(script);
+            String script = "var inputs = document.querySelectorAll('input[id^=\"q205186\"]');" +
+                    "for (var i = 0; i < inputs.length; i++) {" +
+                    "  inputs[i].removeAttribute('checked');" +
+                    "}";
 
-        Duration timeoutDuration = Duration.ofSeconds(10);
-        WebDriverWait wait = new WebDriverWait(driver, timeoutDuration);
+            // Очистка ответов чтобы не забагалось
+            ((JavascriptExecutor) driver).executeScript(script);
 
-        List<WebElement> questionElements = wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.className("que")));
+            Duration timeoutDuration = Duration.ofSeconds(10);
+            WebDriverWait wait = new WebDriverWait(driver, timeoutDuration);
+
+            List<WebElement> questionElements = wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.className("que")));
 
 
-        // Парсинг вопросов и ответов
-        for (WebElement questionElement : questionElements) {
+            // Парсинг вопросов и ответов
+            for (WebElement questionElement : questionElements) {
+                int i = 0;
 
-            int i = 0;
+                // Получение текста вопроса
+                WebElement questionTextElement = questionElement.findElement(By.className("qtext"));
+                String questionText = questionTextElement.getText();
 
-            // Получение текста вопроса
-            WebElement questionTextElement = questionElement.findElement(By.className("qtext"));
-            String questionText = questionTextElement.getText();
+                // Получение уникального идентификатора вопроса
+                WebElement questionIdElement = questionElement.findElement(By.cssSelector("input[name^='q'][name$=':sequencecheck']"));
+                String questionId = questionIdElement.getAttribute("name");
 
-            // Получение уникального идентификатора вопроса
-            WebElement questionIdElement = questionElement.findElement(By.cssSelector("input[name^='q'][name$=':sequencecheck']"));
-            String questionId = questionIdElement.getAttribute("name");
+                // Получение всех ответов на вопрос
+                List<WebElement> answerElements = questionElement.findElements(By.tagName("label"));
+                String answers = "";
+                for (WebElement answerElement : answerElements) {
+                    String answerText = answerElement.getText();
+                    answers += "Ответ " + i + ": " + answerText + ". ";
+                    i++;
+                }
 
-            // Получение всех ответов на вопрос
-            List<WebElement> answerElements = questionElement.findElements(By.tagName("label"));
-            String answers = "";
-            for (WebElement answerElement : answerElements) {
-                String answerText = answerElement.getText();
+                String question = "В ответ дай мне только цифру наиболее подходящего ответа. Мне нужен точный ответ, так что можешь думать над ответом столько времени сколько нужно. Вопрос: " + questionText + ". " + answers;
+                question = question.replace("\n", " ");
+                question = question.replace("\n\n", " ");
+                question = question.replace("\"", "'");
+                String result = questionId.replace(":sequencecheck", "answer") + chatGptApiClient.getAnswers(question);
 
-                answers += "Ответ " + i + ": " + answerText + ". ";
-                i++;
+                WebElement element = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id(result)));
+                ((JavascriptExecutor) driver).executeScript("arguments[0].setAttribute('checked', 'checked');", element);
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e){
+                    throw new RuntimeException(e);
+                }
             }
-
-            String question = "В ответ дай мне только цифру наиболее подходящего ответа. Мне нужен точный ответ, так что можешь думать над ответом столько времени сколько нужно. Вопрос: " + questionText + ". " + answers;
-            question = question.replace("\n", " ");
-            question = question.replace("\n\n", " ");
-            question = question.replace("\"", "'");
-            String result = questionId.replace(":sequencecheck", "answer") + chatGptApiClient.getAnswers(question);
-
-
-            WebElement element = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id(result)));
-
-            ((JavascriptExecutor) driver).executeScript("arguments[0].setAttribute('checked', 'checked');", element);
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (driver != null) {
+                driver.quit();
             }
         }
-
-        // Закрытие браузера
-        driver.quit();
     }
-
 }

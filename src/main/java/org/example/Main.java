@@ -12,14 +12,13 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 
-import java.io.IOException;
 
 
 public class Main {
     private static TrayIcon trayIcon;
     private static final QuestionsTasks questionsTasks = new QuestionsTasks();
-
     private static final OneQuestionTask oneQuestionTask = new OneQuestionTask();
+
 
     public static void main(String[] args) {
         initialize();
@@ -71,14 +70,7 @@ public class Main {
     }
 
     private static void initialize() {
-        try {
-            String command = "start chrome.exe --remote-debugging-port=9222 --user-data-dir=C:\\Windows";
-            ProcessBuilder processBuilder = new ProcessBuilder();
-            processBuilder.command("cmd.exe", "/c", command);
-            processBuilder.start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        AutoUpdater.checkVersion();
     }
 
     private static void fillAnswers() {
@@ -88,4 +80,6 @@ public class Main {
     private static void fillAnswer(){
         oneQuestionTask.getQuestion();
     }
+
+
 }

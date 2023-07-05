@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 
 public class ChatGptApiClient {
     private static final String API_URL = "https://api.openai.com/v1/engines/text-davinci-003/completions";
-    private static final String API_KEY = "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";
+    private static final String API_KEY = "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";
 
     public String getAnswers(String message) {
         OkHttpClient client = new OkHttpClient();
