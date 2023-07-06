@@ -30,7 +30,7 @@ public class QuestionsTasks {
             opt.addArguments("--no-sandbox");
             driver = new ChromeDriver(opt);
 
-            String script = "var inputs = document.querySelectorAll('input[id^=\"q205186\"]');" +
+            String script = "var inputs = document.querySelectorAll('input[id^=\"q\"]');" +
                     "for (var i = 0; i < inputs.length; i++) {" +
                     "  inputs[i].removeAttribute('checked');" +
                     "}";
@@ -59,20 +59,56 @@ public class QuestionsTasks {
                 // Получение всех ответов на вопрос
                 List<WebElement> answerElements = questionElement.findElements(By.tagName("label"));
                 String answers = "";
+                String question = "";
+                boolean flag = false;
+                boolean subFlag = false;
+
                 for (WebElement answerElement : answerElements) {
                     String answerText = answerElement.getText();
                     answers += "Ответ " + i + ": " + answerText + ". ";
+
+                    if(i == 0){
+                        if(answerElement.getAttribute("for").contains("choice")){
+                            flag = true;
+                        } else if(answerElement.getAttribute("for").contains("sub")){
+                            subFlag = true;
+                        }
+                    }
                     i++;
                 }
 
-                String question = "В ответ дай мне только цифру наиболее подходящего ответа. Мне нужен точный ответ, так что можешь думать над ответом столько времени сколько нужно. Вопрос: " + questionText + ". " + answers;
+                if(subFlag){
+                    continue;
+                }
+
+
+                if(flag) {
+                    question = "В ответ дай мне только цифры наиболее подходящих ответов через запятую (скорее всего их несколько). Мне нужен точный ответ, так что можешь думать над ответом столько времени сколько нужно. Вопрос: " + questionText + ". " + answers;
+                } else {
+                    question = "В ответ дай мне только цифру наиболее подходящего ответа. Мне нужен точный ответ, так что можешь думать над ответом столько времени сколько нужно. Вопрос: " + questionText + ". " + answers;
+                }
+
                 question = question.replace("\n", " ");
                 question = question.replace("\n\n", " ");
                 question = question.replace("\"", "'");
-                String result = questionId.replace(":sequencecheck", "answer") + chatGptApiClient.getAnswers(question);
+                String preResult = chatGptApiClient.getAnswers(question);
+                String result = "";
+                if(preResult.contains(",")){
+                    String[] arrAnswers = preResult.split(",");
+                    int index = 0;
+                    while (index < arrAnswers.length) {
+                        String el = arrAnswers[index];
+                        result = questionId.replace(":sequencecheck", "choice") + el;
+                        WebElement element = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id(result)));
+                        ((JavascriptExecutor) driver).executeScript("arguments[0].setAttribute('checked', 'checked');", element);
+                        index++;
+                    }
+                } else {
+                    result = questionId.replace(":sequencecheck", "answer") + preResult;
+                    WebElement element = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id(result)));
+                    ((JavascriptExecutor) driver).executeScript("arguments[0].setAttribute('checked', 'checked');", element);
+                }
 
-                WebElement element = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id(result)));
-                ((JavascriptExecutor) driver).executeScript("arguments[0].setAttribute('checked', 'checked');", element);
                 try {
                     Thread.sleep(5000);
                 } catch (InterruptedException e){
